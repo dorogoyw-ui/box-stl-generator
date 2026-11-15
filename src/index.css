@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --background: 225 14% 6%;
+    --foreground: 225 17% 92%;
+    --card: 225 18% 9%;
+    --card-foreground: 225 17% 92%;
+    --popover: 223 16% 11%;
+    --popover-foreground: 225 17% 92%;
+    --primary: 10 100% 65%;
+    --primary-foreground: 15 55% 7%;
+    --secondary: 222 17% 12%;
+    --secondary-foreground: 225 17% 92%;
+    --muted: 222 17% 12%;
+    --muted-foreground: 223 9% 59%;
+    --accent: 222 15% 15%;
+    --accent-foreground: 225 17% 96%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 13% 16%;
+    --input: 222 13% 20%;
+    --ring: 10 100% 65%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Range sliders: the filled part of the track and the thumb ring take --c
+   (set per slider); --p is the fill percentage. */
+input[type='range'].slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--c, hsl(var(--primary))) var(--p, 50%),
+    hsl(var(--input)) var(--p, 50%)
+  );
+  outline: none;
+}
+input[type='range'].slider::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+}
+input[type='range'].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--c, hsl(var(--primary)));
+  cursor: pointer;
+}
+input[type='range'].slider::-moz-range-thumb {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--c, hsl(var(--primary)));
+  cursor: pointer;
+}
+input[type='range'].slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.35);
+}
