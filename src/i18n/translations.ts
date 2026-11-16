@@ -96,6 +96,9 @@ export interface Translations {
     fitToleranceHintSleeve: string
     lipHeight: string
     lipHeightHint: string
+    hingeSkirt: string
+    enableHingeLips: string
+    hingeLipsHint: string
     capSkirtHeight: string
     capSkirtHeightHint: string
     fingerCutout: string
