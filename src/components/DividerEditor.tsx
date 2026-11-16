@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Plus, Trash2, AlignHorizontalSpaceAround, Eraser } from 'lucide-react'
 import { Button } from './ui/button'
 import { Segmented } from './ui/segmented'
-import { BoxParams } from '@/utils/boxGenerator'
+import { BoxParams, DividerCut } from '@/utils/boxGenerator'
 import { AXIS_COLORS, compartmentSpans, evenPositions } from '@/utils/boxLayout'
 import { useI18n } from '@/i18n/index'
 
 interface DividerEditorProps {
   params: BoxParams
-  onChange: (patch: Pick<Partial<BoxParams>, 'divisionsX' | 'divisionsZ'>) => void
+  onChange: (patch: Pick<Partial<BoxParams>, 'divisionsX' | 'divisionsZ' | 'dividerCuts' | 'customDividerRemoval'>) => void
 }
 
 type Axis = 'x' | 'z'
@@ -60,6 +60,7 @@ export function DividerEditor({ params, onChange }: DividerEditorProps) {
   const [width, setWidth] = useState(300)
   const [selected, setSelected] = useState<{ axis: Axis; index: number } | null>(null)
   const [mode, setMode] = useState<Mode>('visual')
+  const [deleteSegmentMode, setDeleteSegmentMode] = useState(false)
 
   useEffect(() => {
     const el = wrapRef.current
@@ -80,8 +81,13 @@ export function DividerEditor({ params, onChange }: DividerEditorProps) {
   // Closest two dividers may get: they can touch but not overlap
   const minGap = (axis: Axis) => Math.max(1, Math.ceil((divT / inner(axis)) * 100))
 
+  const cuts: DividerCut[] = params.dividerCuts ?? []
   const commit = (axis: Axis, arr: number[]) =>
     onChange(axis === 'x' ? { divisionsX: arr } : { divisionsZ: arr })
+
+  const cutsFor = (axis: Axis, divider: number) => cuts.filter(c =>
+    c.axis === axis && Math.abs(c.divider - divider) < 0.001
+  )
 
   // Dragging snaps to whole percents; typed millimetres keep two decimals
   const setPosition = (axis: Axis, index: number, value: number, precise = false) => {
@@ -92,8 +98,12 @@ export function DividerEditor({ params, onChange }: DividerEditorProps) {
     if (lo > hi) return
     const next = Math.min(hi, Math.max(lo, precise ? Math.round(value * 100) / 100 : Math.round(value)))
     if (next === arr[index]) return
+    const previous = arr[index]
     arr[index] = next
-    commit(axis, arr)
+    const updatedCuts = cuts.map(c => c.axis === axis && Math.abs(c.divider - previous) < 0.001
+      ? { ...c, divider: next }
+      : c)
+    onChange({ ...(axis === 'x' ? { divisionsX: arr } : { divisionsZ: arr }), dividerCuts: updatedCuts })
   }
 
   const addDivider = (axis: Axis) => {
@@ -113,15 +123,46 @@ export function DividerEditor({ params, onChange }: DividerEditorProps) {
   const clearAll = () => {
     const total = xs.length + zs.length
     if (total > 2 && !confirm(`Remove all ${total} dividers?`)) return
-    onChange({ divisionsX: [], divisionsZ: [] })
+    onChange({ divisionsX: [], divisionsZ: [], dividerCuts: [], customDividerRemoval: false })
     setSelected(null)
+    setDeleteSegmentMode(false)
   }
 
   const removeDivider = (axis: Axis, index: number) => {
     const arr = [...list(axis)]
+    const removedPosition = arr[index]
     arr.splice(index, 1)
-    commit(axis, arr)
+    onChange({ ...(axis === 'x' ? { divisionsX: arr } : { divisionsZ: arr }), dividerCuts: cuts.filter(c => !(c.axis === axis && Math.abs(c.divider - removedPosition) < 0.001)) })
     setSelected(null)
+  }
+
+  // In delete mode, a click removes only the span between the nearest inner
+  // wall and perpendicular divider (or between two perpendicular dividers).
+  const removeClickedSegment = (axis: Axis, index: number, alongPct: number) => {
+    const divider = list(axis)[index]
+    const perpendicularAxis: Axis = axis === 'x' ? 'z' : 'x'
+    const cross = (axis === 'x' ? zs : xs).filter(position =>
+      !cuts.some(c => c.axis === perpendicularAxis && Math.abs(c.divider - position) < 0.001 &&
+        divider >= Math.min(c.from, c.to) - 0.001 && divider <= Math.max(c.from, c.to) + 0.001)
+    )
+    const spanLength = inner(perpendicularAxis)
+    const halfThicknessPct = (divT / spanLength) * 50
+    const boundaries = [0, ...cross.flatMap(p => [p - halfThicknessPct, p + halfThicknessPct]), 100]
+      .map(v => Math.max(0, Math.min(100, v)))
+      .sort((a, b) => a - b)
+    const segments: [number, number][] = []
+    for (let i = 0; i < boundaries.length - 1; i++) {
+      const from = boundaries[i], to = boundaries[i + 1]
+      if (to - from > 0.05 && !(cross.some(p => from >= p - halfThicknessPct - 0.001 && to <= p + halfThicknessPct + 0.001))) {
+        segments.push([from, to])
+      }
+    }
+    const target = segments.find(([from, to]) => alongPct >= from - 0.01 && alongPct <= to + 0.01)
+    if (!target) return
+    const [from, to] = target
+    if (cuts.some(c => c.axis === axis && Math.abs(c.divider - divider) < 0.001 && Math.abs(c.from - from) < 0.01 && Math.abs(c.to - to) < 0.01)) return
+    onChange({ dividerCuts: [...cuts, { axis, divider, from, to }], customDividerRemoval: true })
+    setSelected({ axis, index })
   }
 
   // ── Geometry (pixel space) ────────────────────────────────────────────────
@@ -187,26 +228,61 @@ export function DividerEditor({ params, onChange }: DividerEditorProps) {
         aria-valuemax={99}
         aria-valuenow={list(axis)[index]}
         aria-valuetext={`${list(axis)[index]}%, ${fmt((list(axis)[index] / 100) * inner(axis))} mm from the ${axis === 'x' ? 'left' : 'front'} wall`}
-        style={{ cursor: axis === 'x' ? 'ew-resize' : 'ns-resize', touchAction: 'none', outline: 'none' }}
+        style={{ cursor: deleteSegmentMode ? 'crosshair' : axis === 'x' ? 'ew-resize' : 'ns-resize', touchAction: 'none', outline: 'none' }}
         onFocus={() => setSelected({ axis, index })}
         onKeyDown={(e) => onKeyDown(axis, index, e)}
         onPointerDown={(e) => {
-          e.currentTarget.setPointerCapture(e.pointerId)
           setSelected({ axis, index })
+          if (deleteSegmentMode) {
+            e.preventDefault()
+            e.stopPropagation()
+            const rect = svgRef.current?.getBoundingClientRect()
+            if (!rect) return
+            const alongPct = axis === 'x'
+              ? ((iy + ih - (e.clientY - rect.top)) / ih) * 100
+              : ((e.clientX - rect.left - ix) / iw) * 100
+            removeClickedSegment(axis, index, Math.max(0, Math.min(100, alongPct)))
+            return
+          }
+          e.currentTarget.setPointerCapture(e.pointerId)
         }}
         onPointerMove={(e) => { if (e.currentTarget.hasPointerCapture(e.pointerId)) dragTo(axis, index, e) }}
-        onPointerUp={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
+        onPointerUp={(e) => { if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId) }}
       >
         {axis === 'x' ? (
           <>
             <rect x={pos - 9} y={iy} width={18} height={ih} fill="transparent" />
-            <rect x={pos - dt / 2} y={iy} width={dt} height={ih} fill={color} opacity={isSel ? 1 : 0.75} />
+            {(() => {
+              const removed = cutsFor(axis, list(axis)[index]).sort((a, b) => a.from - b.from)
+              const spans: [number, number][] = []
+              let cursor = 0
+              for (const cut of removed) {
+                if (cut.from > cursor) spans.push([cursor, cut.from])
+                cursor = Math.max(cursor, cut.to)
+              }
+              if (cursor < 100) spans.push([cursor, 100])
+              return spans.map(([from, to], n) => (
+                <rect key={n} x={pos - dt / 2} y={iy + ih - (to / 100) * ih} width={dt} height={(to - from) / 100 * ih} fill={color} opacity={isSel ? 1 : 0.75} />
+              ))
+            })()}
             <circle cx={pos} cy={iy + ih / 2} r={isSel ? 6 : 5} fill={isSel ? '#fff' : 'hsl(var(--card))'} stroke={color} strokeWidth={2.5} />
           </>
         ) : (
           <>
             <rect x={ix} y={pos - 9} width={iw} height={18} fill="transparent" />
-            <rect x={ix} y={pos - dt / 2} width={iw} height={dt} fill={color} opacity={isSel ? 1 : 0.75} />
+            {(() => {
+              const removed = cutsFor(axis, list(axis)[index]).sort((a, b) => a.from - b.from)
+              const spans: [number, number][] = []
+              let cursor = 0
+              for (const cut of removed) {
+                if (cut.from > cursor) spans.push([cursor, cut.from])
+                cursor = Math.max(cursor, cut.to)
+              }
+              if (cursor < 100) spans.push([cursor, 100])
+              return spans.map(([from, to], n) => (
+                <rect key={n} x={ix + (from / 100) * iw} y={pos - dt / 2} width={(to - from) / 100 * iw} height={dt} fill={color} opacity={isSel ? 1 : 0.75} />
+              ))
+            })()}
             <circle cx={ix + iw / 2} cy={pos} r={isSel ? 6 : 5} fill={isSel ? '#fff' : 'hsl(var(--card))'} stroke={color} strokeWidth={2.5} />
           </>
         )}
@@ -221,7 +297,7 @@ export function DividerEditor({ params, onChange }: DividerEditorProps) {
       <Segmented
         aria-label="Divider editing mode"
         value={mode}
-        onChange={setMode}
+        onChange={(nextMode) => { setMode(nextMode); if (nextMode === 'numbers') setDeleteSegmentMode(false) }}
         options={[{ value: 'visual', label: t9n.dividerEditor.visual }, { value: 'numbers', label: t9n.dividerEditor.numbers }]}
       />
 
@@ -270,6 +346,20 @@ export function DividerEditor({ params, onChange }: DividerEditorProps) {
           {xs.map((_, i) => renderHandle('x', i))}
           {zs.map((_, i) => renderHandle('z', i))}
         </svg>
+      </div>
+
+      <div className="space-y-1.5">
+        <Button
+          variant={deleteSegmentMode ? 'default' : 'secondary'}
+          size="sm"
+          className="w-full"
+          disabled={xs.length + zs.length === 0}
+          onClick={() => setDeleteSegmentMode(v => !v)}
+        >
+          <Trash2 className="mr-1.5 h-4 w-4" />
+          {deleteSegmentMode ? t9n.dividerEditor.cancelSegmentRemoval : t9n.dividerEditor.removeAnySegment}
+        </Button>
+        {deleteSegmentMode && <p className="text-xs text-muted-foreground">{t9n.dividerEditor.removeSegmentHint}</p>}
       </div>
 
       <div className="min-h-[2rem] flex items-center gap-2 text-xs text-muted-foreground">
@@ -358,13 +448,13 @@ export function DividerEditor({ params, onChange }: DividerEditorProps) {
         <Button
           variant="ghost"
           size="sm"
-          disabled={xs.length + zs.length === 0}
+          disabled={xs.length + zs.length === 0 || params.customDividerRemoval === true}
           onClick={() => onChange({ divisionsX: evenPositions(xs.length), divisionsZ: evenPositions(zs.length) })}
         >
           <AlignHorizontalSpaceAround className="mr-1.5 h-4 w-4" />
           {t9n.dividerEditor.spaceEvenly}
         </Button>
-        <Button variant="ghost" size="sm" disabled={xs.length + zs.length === 0} onClick={clearAll}>
+        <Button variant="ghost" size="sm" disabled={xs.length + zs.length === 0 && !params.customDividerRemoval && cuts.length === 0} onClick={clearAll}>
           <Eraser className="mr-1.5 h-4 w-4" />
           {t9n.dividerEditor.clearAll}
         </Button>

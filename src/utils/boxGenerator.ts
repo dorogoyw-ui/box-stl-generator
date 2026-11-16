@@ -12,6 +12,8 @@ export type LidPattern = 'none' | 'circles' | 'squares' | 'diamonds' | 'hexagons
 
 export type FingerSlotAxes = 'none' | 'x' | 'z' | 'both'
 
+export interface DividerCut { axis: 'x' | 'z'; divider: number; from: number; to: number }
+
 export const LID_PATTERNS: { value: LidPattern; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'circles', label: 'Circles' },
@@ -35,6 +37,8 @@ export interface BoxParams {
   lidTolerance: number   // gap between lid lip and box inner wall for printer fit
   divisionsX: number[]   // divider positions as percentages (1-99) along inner width
   divisionsZ: number[]   // divider positions as percentages (1-99) along inner depth
+  dividerCuts: DividerCut[] // removed spans on individual dividers; percentages along each divider
+  customDividerRemoval: boolean // locks even spacing until all dividers are cleared
   divisionThickness: number // divider wall thickness in mm (clamped to [0.4, wallThickness])
   lidText: string
   lidTextDepth: number
@@ -59,6 +63,7 @@ export interface BoxParams {
   dividerHeight: number        // divider height above the floor in mm; 0 = full height (flush with the rim)
   chamferSize: number        // 45° chamfer on outer vertical edges (0 = none)
   includeHinge: boolean
+  hingeLips: boolean          // optional inner retaining skirt on hinged lids
   hingeCount: number         // number of hinges along the back edge (1–3)
   hingeDiameter: number      // outer barrel diameter in mm
   hingePinDiameter: number   // pin hole diameter in mm
@@ -101,7 +106,7 @@ export function dividersLowered(params: BoxParams): boolean {
 // bottom never touch it, so the lip needs no notches for them.
 function dividersReachLip(params: BoxParams): boolean {
   if (!dividersLowered(params)) return true
-  const lip = hasHinge(params) ? 0 : Math.min(params.lidHeight, params.height - params.wallThickness)
+  const lip = hasHinge(params) && !params.hingeLips ? 0 : Math.min(params.lidHeight, params.height - params.wallThickness)
   return params.wallThickness + dividerHeightMm(params) > params.height - lip + 0.01
 }
 
@@ -401,6 +406,33 @@ export function generateBox(params: BoxParams) {
   } else {
     box = { polygons: polys }
   }
+  // Remove only the clicked span of a divider. The cutter starts just above
+  // the floor so the bottom remains intact, and ends at the faces of the
+  // nearest perpendicular wall/divider, preserving the junctions.
+  if (params.dividerCuts?.length) {
+    const cutSolids = params.dividerCuts.flatMap(cut => {
+      const from = Math.max(0, Math.min(100, Math.min(cut.from, cut.to)))
+      const to = Math.max(0, Math.min(100, Math.max(cut.from, cut.to)))
+      if (to - from < 0.05) return []
+      const zBottom = fl + 0.01
+      const zTop = dz + 0.01
+      const cutHeight = Math.max(0.01, zTop - zBottom)
+      const zCenter = (zBottom + zTop) / 2
+      if (cut.axis === 'x') {
+        const x = -iw2 + (cut.divider / 100) * iw
+        const y0 = -id2 + (from / 100) * id
+        const y1 = -id2 + (to / 100) * id
+        return [translate([x, (y0 + y1) / 2, zCenter], cuboid({ size: [dt + 0.04, y1 - y0, cutHeight] }))]
+      }
+      const y = -id2 + (cut.divider / 100) * id
+      const x0 = -iw2 + (from / 100) * iw
+      const x1 = -iw2 + (to / 100) * iw
+      return [translate([(x0 + x1) / 2, y, zCenter], cuboid({ size: [x1 - x0, dt + 0.04, cutHeight] }))]
+    })
+    const cutGeometry = unionAll(cutSolids)
+    if (cutGeometry) box = subtract(asGeom3(box), cutGeometry)
+  }
+
   const holeSolids: any[] = []
   if (params.boxPattern !== 'none') {
     const wallHoles = boxWallHoles(params)
@@ -936,6 +968,51 @@ function lidPatternHoles(params: BoxParams, textGeometry?: any): any | null {
   return patternPrisms(params, region, -wt - 0.5, 0.5, exclusions)
 }
 
+// Optional inner retaining skirt for hinged lids. It is added below the flat
+// hinged plate (local Z=-wallThickness), leaving the hinge arm/barrel area at
+// the rear outside the box untouched. Its footprint follows the box's rounded
+// inner contour and uses the same fit tolerance and divider notches as a
+// friction lid.
+function generateHingedLidSkirt(params: BoxParams): any | null {
+  if (!hasHinge(params) || !params.hingeLips) return null
+  const { width, depth, height, wallThickness: wt, lidTolerance: tol, divisionsX, divisionsZ, divisionThickness } = params
+  const lipHeight = Math.min(params.lidHeight, height - wt)
+  if (lipHeight <= 0.05) return null
+
+  const radius = Math.max(0, Math.min(params.boxCornerRadius ?? 0, width / 2 - 0.1, depth / 2 - 0.1))
+  const outerW = width - 2 * (wt + tol)
+  const outerD = depth - 2 * (wt + tol)
+  const innerW = outerW - 2 * wt
+  const innerD = outerD - 2 * wt
+  if (innerW <= 0.1 || innerD <= 0.1) return null
+
+  const outerR = Math.max(0, radius - wt - tol)
+  const innerR = Math.max(0, outerR - wt)
+  // Extend the skirt 0.04 mm into the plate so the union is a real volume
+  // overlap rather than two shells meeting on a coplanar face.
+  const zCenter = -wt - lipHeight / 2 + 0.02
+  const outerHeight = lipHeight + 0.04
+  const outer = translate([0, 0, zCenter], roundedFootprintPrism(outerW, outerD, outerHeight, outerR))
+  const inner = translate([0, 0, zCenter], roundedFootprintPrism(innerW, innerD, outerHeight + 0.04, innerR))
+  let skirt = subtract(outer, inner)
+
+  const dt = clampDivisionThickness(divisionThickness, wt)
+  const innerBoxW = width - 2 * wt
+  const innerBoxD = depth - 2 * wt
+  const slotW = dt + tol * 2 + 0.2
+  const cutters: any[] = []
+  for (const pct of dividersReachLip(params) ? divisionsX : []) {
+    const x = innerBoxW / 2 - (pct / 100) * innerBoxW
+    cutters.push(translate([x, 0, zCenter], cuboid({ size: [slotW, outerD + 2, outerHeight + 0.2] })))
+  }
+  for (const pct of dividersReachLip(params) ? divisionsZ : []) {
+    const y = -innerBoxD / 2 + (pct / 100) * innerBoxD
+    cutters.push(translate([0, y, zCenter], cuboid({ size: [outerW + 2, slotW, outerHeight + 0.2] })))
+  }
+  for (const cutter of cutters) skirt = subtract(skirt, cutter)
+  return skirt
+}
+
 export function generateLid(params: BoxParams, textGeometry?: any) {
   // Text requires CSG operations (subtract/union)
   let lid = textGeometry ? generateLidCSG(params, textGeometry) : generateFlatLid(params)
@@ -976,6 +1053,13 @@ export function generateLid(params: BoxParams, textGeometry?: any) {
       lid = subtract(asGeom3(lid), innerCutter)
     }
   }
+
+  // Hinged lids may optionally have the same inward retaining skirt as a
+  // friction lid. The skirt is unioned to the underside of the plate, leaving
+  // the hinge knuckles and their mounting arm unchanged.
+  const hingedSkirt = generateHingedLidSkirt(params)
+  if (hingedSkirt) lid = union(asGeom3(lid), hingedSkirt)
+
   return lid
 }
 
@@ -983,11 +1067,9 @@ export function generateLid(params: BoxParams, textGeometry?: any) {
 // Uses a heightmap grid: cap cells have top=0, lip wall cells have top=lidHeight.
 // Vertical step faces are generated automatically where heights differ.
 //
-// Hinged lids have NO lip (lh = 0 → plain slab): a lip can't coexist with a
-// hinge, because a lid whose barrel aligns with the box knuckles when closed
-// would need lip and barrel on opposite faces — unprintable flat. The hinged
-// lid is instead modeled directly in its closed orientation (z=0 face up),
-// which is also exactly what the knuckle placement assumes.
+// The hinged lid's base plate is always a flat slab (lh = 0). An optional
+// retaining skirt is added separately by generateLid(), below the plate, so
+// the snap-hinge arm/barrel alignment remains unchanged.
 function generateFlatLid(params: BoxParams) {
   const { width, depth, height, wallThickness: wt, lidHeight: lhRaw, lidTolerance: tol, divisionsX, divisionsZ, divisionThickness, chamferSize, includeHinge } = params
   const lh = includeHinge ? 0 : Math.min(lhRaw, height - wt)  // lip can't exceed inner box height

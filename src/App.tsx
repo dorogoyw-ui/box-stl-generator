@@ -266,7 +266,7 @@ function App() {
     }
   } else if (arranged && params.includeLid) {
     const placed = arrangement.placements[1]
-    lidPosition = [placed.x, placed.y, isSleeve ? sleeve.h / 2 : wt]
+    lidPosition = [placed.x, placed.y, isSleeve ? sleeve.h / 2 : wt + (params.includeHinge && params.hingeLips ? Math.min(params.lidHeight, params.height - wt) : 0)]
     // A муфта is printed/rested with its closed flat roof on the build plate:
     // skirt walls point upward. Rotate only the cap itself; the exported mesh is unchanged.
     const capFlip = isCap ? Math.PI : 0
@@ -275,7 +275,7 @@ function App() {
     lidPosition = [
       isSleeve ? params.width / 2 + sleeve.w / 2 + 10 : params.width + 10,
       0,
-      isSleeve ? sleeve.h / 2 : wt,
+      isSleeve ? sleeve.h / 2 : wt + (params.includeHinge && params.hingeLips ? Math.min(params.lidHeight, params.height - wt) : 0),
     ]
     // Initial standalone position: муфта rests on its flat closed roof,
     // with the four skirt walls pointing upward, like a normal print orientation.

@@ -5,11 +5,10 @@ export function evenPositions(count: number): number[] {
   return Array.from({ length: count }, (_, i) => Math.round((i + 1) * 100 / (count + 1)))
 }
 
-// Friction-fit cap lids hang their lip down into the box interior, so that
-// depth is lost to contents when the lid is on. Hinged lids are flat slabs
-// and sleeves wrap the outside — neither costs interior height.
+// Friction-fit lids, and hinged lids with optional retaining lips, extend
+// into the box interior, so that depth is lost to contents when the lid is on.
 export function frictionLipDepth(params: BoxParams): number {
-  return params.includeLid && params.lidStyle === 'lid' && !params.includeHinge
+  return params.includeLid && params.lidStyle === 'lid' && (!params.includeHinge || params.hingeLips)
     ? params.lidHeight
     : 0
 }

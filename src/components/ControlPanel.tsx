@@ -631,19 +631,41 @@ export function ControlPanel({
                 )}
 
                 {closure === 'hinged' && (
-                  <Group title={t.controlPanel.hinge} defaultOpen summary={`${params.hingeCount} ${t.controlPanel.hingeCount}${params.hingeCount === 1 ? '' : 's'}`}>
-                    <SliderField label={t.controlPanel.numberOfHinges} min={1} max={3} value={params.hingeCount}
-                      onChange={(value) => updateParam('hingeCount', value)} />
-                    <SliderField label={t.controlPanel.barrelDiameter} unit={t.common.mm} min={6} max={14} step={0.5} value={params.hingeDiameter}
-                      onChange={(value) => updateParam('hingeDiameter', value)}
-                      hint={t.controlPanel.barrelDiameterHint} />
-                    <SliderField label={t.controlPanel.axleDiameter} unit={t.common.mm} min={2} max={5} step={0.5} value={params.hingePinDiameter}
-                      onChange={(value) => updateParam('hingePinDiameter', value)}
-                      hint={t.controlPanel.axleDiameterHint} />
-                    <p className="text-xs text-muted-foreground">
-                      {t.controlPanel.hingeInstructions}
-                    </p>
-                  </Group>
+                  <>
+                    <Group title={t.controlPanel.hinge} defaultOpen summary={`${params.hingeCount} ${t.controlPanel.hingeCount}${params.hingeCount === 1 ? '' : 's'}`}>
+                      <SliderField label={t.controlPanel.numberOfHinges} min={1} max={3} value={params.hingeCount}
+                        onChange={(value) => updateParam('hingeCount', value)} />
+                      <SliderField label={t.controlPanel.barrelDiameter} unit={t.common.mm} min={6} max={14} step={0.5} value={params.hingeDiameter}
+                        onChange={(value) => updateParam('hingeDiameter', value)}
+                        hint={t.controlPanel.barrelDiameterHint} />
+                      <SliderField label={t.controlPanel.axleDiameter} unit={t.common.mm} min={2} max={5} step={0.5} value={params.hingePinDiameter}
+                        onChange={(value) => updateParam('hingePinDiameter', value)}
+                        hint={t.controlPanel.axleDiameterHint} />
+                      <p className="text-xs text-muted-foreground">
+                        {t.controlPanel.hingeInstructions}
+                      </p>
+                    </Group>
+                    <div className="space-y-3 rounded-md border border-border/60 px-3 py-3">
+                      <SwitchRow
+                        label={t.controlPanel.enableHingeLips}
+                        checked={params.hingeLips}
+                        onChange={(v) => updateParam('hingeLips', v)}
+                      />
+                      <p className="text-xs text-muted-foreground">{t.controlPanel.hingeLipsHint}</p>
+                      {params.hingeLips && (
+                        <Group title={t.controlPanel.hingeSkirt} defaultOpen>
+                          <SliderField label={t.controlPanel.fitTolerance} unit={t.common.mm} min={0.1} max={1} step={0.05}
+                            value={params.lidTolerance}
+                            onChange={(value) => updateParam('lidTolerance', value)}
+                            hint={t.controlPanel.fitToleranceHint} />
+                          <SliderField label={t.controlPanel.lipHeight} unit={t.common.mm} min={2} max={20} step={0.5}
+                            value={params.lidHeight}
+                            onChange={(value) => updateParam('lidHeight', value)}
+                            hint={t.controlPanel.lipHeightHint} />
+                        </Group>
+                      )}
+                    </div>
+                  </>
                 )}
 
                 <Group

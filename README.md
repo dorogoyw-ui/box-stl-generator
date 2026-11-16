@@ -100,3 +100,112 @@ pnpm run check:stl # проверка целостности экспортир�
 ## Лицензия
 
 Проект распространяется по лицензии **Apache License 2.0**.
+
+---
+
+# 3D Box Generator
+
+A web application for designing parametric boxes and lids for 3D printing. Configure dimensions, compartments, wall thickness, corner radii, cutouts, and lid details; inspect the model in an interactive 3D viewer and export parts as STL files.
+
+The application runs locally in your browser. Parameters and projects are stored in the user's browser. This fork's interface is available in Russian and English.
+
+**Try it online:** https://dorogoyw-ui.github.io/box-stl-generator/
+
+## Features
+
+- **Interactive 3D viewer** — the model updates as parameters change. Use a free-perspective view or a fixed isometric view with dimension guides. The mouse wheel controls zoom; dragging rotates or pans depending on the view.
+- **Parametric box** — configure width, depth, height, wall thickness, and floor thickness. Dimensions can be entered as outer dimensions or as the required internal cavity size; clearance is handled automatically.
+- **Adjustable corner radius** — set the radius of the vertical box corners. The radius is coordinated with the lid, sleeve, and cap geometry so mating parts can fit together.
+- **Visual divider editor** — top-down box layout with draggable dividers, add/remove controls, even distribution, and manual coordinate entry. Each compartment displays its usable dimensions in millimetres.
+- **Configurable dividers** — adjust divider thickness and height; dividers can be lower than the outer walls.
+- **Finger slots** — add recesses to outer walls and/or dividers to make contents easier to remove. Configure axes, width, depth, and position; a rounded U-shaped bottom is available.
+- **Cutout patterns** — circular, square, diamond, hexagonal, triangular, and elongated-slot patterns. Patterns can be applied to box walls, the floor, dividers, and lids/sleeves, with separate options where available.
+- **Four closure types**
+  - **Lid — friction-fit lid:** a lid with an inner lip; configure lip height and fit tolerance.
+  - **Cap — slip-on cap:** fits over the top of the box; its inner walls account for the box dimensions and fit clearance.
+  - **Sleeve — sliding sleeve:** the box slides into a sleeve with an open end; configure sliding clearance and an optional finger grip.
+  - **Hinged — hinged lid:** a flat lid on snap-fit hinges; choose 1–3 hinges, with no separate pins or screws required.
+- **Hinged-lid lips (optional)** — enable inner lips on the hinged lid and configure their fit clearance and height. When disabled, the hinged lid remains flat; hinge hardware remains in place when lips are enabled.
+- **Sleeve lip height** — adjust the rim/lip height of the sleeve independently.
+- **Custom divider removal** — enable the remove-divider mode and click a divider segment in the visual layout to remove only the section between its nearest wall/divider intersections. After a segment is removed, **Evenly** is disabled until **Clear all** is used.
+- **Lid text** — add engraved or raised text, configure size and depth, and rotate it by 0°, 90°, 180°, or 270°. Cyrillic text is supported through browser text rendering.
+- **Starter calculators (Start from…)** — create a box from a target volume, item dimensions/count, or specified compartment dimensions.
+- **Printer plate fit** — choose a preset for a popular printer or enter a custom plate size. Automatic arrangement places the box and lid/sleeve side by side, tests 90° rotations, and checks whether all parts fit together.
+- **Projects and sharing** — save projects in the browser; search, sort, duplicate, and delete them. Share a project using a link or JSON file, and export or restore the entire project library.
+- **STL export and material estimate** — export each part separately. Filenames include the project name and dimensions. View part dimensions and estimated material usage for PLA, PETG, or ABS.
+- **Mesh integrity checks** — exported geometry is checked for open and non-manifold edges and other common mesh defects.
+
+## Getting started
+
+Requires Node.js 22.13 or later and pnpm.
+
+```bash
+pnpm install
+pnpm run dev
+```
+
+Open the address shown in the terminal (usually `http://localhost:5173`).
+
+### Build and validation
+
+```bash
+pnpm run build     # type-check and production build in dist/
+pnpm run preview   # preview the production build locally
+pnpm run check:stl # validate exported STL meshes
+```
+
+Pushes to the `main` branch are automatically deployed to GitHub Pages using the `deploy.yml` workflow.
+
+## Usage
+
+### Top bar
+
+- **Project name** — opens the project manager. The arrow next to the name opens a quick menu for saving, loading, and creating projects.
+- **⋯ menu** — copy a share link, export the current project as JSON, export the entire library, or import a JSON file.
+- **Export** — export the current box and enabled lid/sleeve as STL files.
+
+### Box tab
+
+- **Start from…** — create an initial configuration from volume, items, or specified compartment dimensions.
+- **Dimensions** — switch between outer dimensions and internal cavity dimensions. In internal mode, an additional clearance can be specified.
+- **Dividers** — visually position dividers, edit their coordinates, thickness, and height, and distribute them evenly. Use **Remove arbitrary divider** to enter segment-removal mode, then click the desired segment in the visual layout. Only the segment between the nearest intersections is removed. **Evenly** remains disabled after a custom removal until **Clear all** is pressed.
+- **Walls** — configure wall thickness and corner radius. The radius slider uses 0.5 mm increments and is automatically limited by the box dimensions.
+- **Details / Cutouts** — configure finger slots and cutout patterns. Finger slots can target outer walls and/or dividers and can have a rounded bottom. Pattern shape, size, and spacing are configurable, with separate floor and divider options.
+
+### Lid tab
+
+Choose **None**, **Lid**, **Cap**, **Sleeve**, or **Hinged**. The assembled-preview toggle shows the closed lid or the box inside the sleeve; this affects the preview only, not exported geometry.
+
+- **Fit** — fit tolerance and lip height for a friction-fit lid; sliding clearance and sleeve rim height for a sleeve.
+- **Hinges** — choose 1–3 hinges and configure the hinge parameters for a hinged lid.
+- **Hinged-lid lips** — use **Enable lips** to add inner lips to a hinged lid. When enabled, the lip fit tolerance and lip height controls become available. The lips are shaped to fit inside the box while preserving the hinge hardware.
+- **Cutouts** — patterns on the top surface of a lid or on sleeve walls.
+- **Text** — configure the inscription, size, depth, engraving/raised mode, and rotation (0°/90°/180°/270°).
+
+### Print tab
+
+- **Printer plate** — choose a printer preset or enter custom plate dimensions. Warnings indicate when a part or the complete set does not fit.
+- **Auto-arrange parts** — automatically place the box and lid side by side on the preview plate. Parts may be rotated by 90°; this does not affect exported STL files.
+- **Material and parts** — choose PLA, PETG, or ABS, view part dimensions and estimated weight, and download STL files.
+
+### Project manager
+
+Open the manager by selecting the project name. Cards show a preview, dimensions, compartment count, lid type, and save date. Projects can be opened, duplicated, deleted, searched, and sorted. The manager also supports creating projects, importing JSON, and exporting the entire library.
+
+### 3D viewer controls
+
+- **Perspective view:** left mouse button rotates; right mouse button pans; the wheel zooms in and out.
+- **Isometric view:** camera angle is fixed; dragging pans; the wheel changes zoom.
+
+## Technologies
+
+- React, TypeScript, and Vite
+- Three.js, React Three Fiber, and Drei
+- `@jscad/modeling` for parametric CAD geometry
+- Tailwind CSS and shadcn/ui
+
+See [CHANGELOG.md](CHANGELOG.md) for the history of significant changes.
+
+## License
+
+This project is distributed under the **Apache License 2.0**.

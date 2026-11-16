@@ -15,6 +15,8 @@ export const DEFAULTS: BoxParams = {
   lidTolerance: 0.3,
   divisionsX: [],
   divisionsZ: [],
+  dividerCuts: [],
+  customDividerRemoval: false,
   divisionThickness: 2,
   lidText: '',
   lidTextDepth: 0.8,
@@ -39,6 +41,7 @@ export const DEFAULTS: BoxParams = {
   dividerHeight: 0,
   chamferSize: 0,
   includeHinge: false,
+  hingeLips: false,
   hingeCount: 1,
   hingeDiameter: 8,
   hingePinDiameter: 3, // snap-axle diameter; Ø3 is sturdy and still snaps easily
@@ -110,6 +113,7 @@ export function normalizeParams(raw: unknown): BoxParams {
   if (src.divisionThickness == null) p.divisionThickness = p.wallThickness
   p.divisionThickness = clampDivisionThickness(p.divisionThickness, p.wallThickness)
   if (!['sleeve', 'cap'].includes(p.lidStyle)) p.lidStyle = 'lid'
+  p.hingeLips = p.hingeLips === true
   if (p.dimensionMode !== 'interior') p.dimensionMode = 'exterior'
   p.interiorTolerance = Math.min(Math.max(Number(p.interiorTolerance) || 0, 0), 20)
   p.capSkirtHeight = Math.min(Math.max(Number(p.capSkirtHeight) || 10, 2), 30)
@@ -132,6 +136,9 @@ export function normalizeParams(raw: unknown): BoxParams {
   p.dividerHeight = Math.max(0, Number(p.dividerHeight) || 0)
   if (!Array.isArray(p.divisionsX)) p.divisionsX = []
   if (!Array.isArray(p.divisionsZ)) p.divisionsZ = []
+  if (!Array.isArray(p.dividerCuts)) p.dividerCuts = []
+  p.customDividerRemoval = p.customDividerRemoval === true
+  p.dividerCuts = p.dividerCuts.filter(c => c && (c.axis === 'x' || c.axis === 'z') && Number.isFinite(c.divider) && Number.isFinite(c.from) && Number.isFinite(c.to))
   return p
 }
 

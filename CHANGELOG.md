@@ -138,3 +138,154 @@
 - Инструменты: калькулятор объёма, калькулятор отсеков, оптимизатор размещения на столе принтера и редактор разделителей.
 - Сохранение текущего проекта в браузере.
 - Публикация на GitHub Pages.
+
+---
+
+# Changelog
+
+This file records all significant project changes. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Since the project does not yet use versioned releases, entries are grouped by date.
+
+## 2026-11-16
+
+### Added
+- **Optional lips for hinged lids.** A new **Enable lips** toggle adds inner lips to the hinged lid. When enabled, separate controls expose the lip fit tolerance and lip height, following the corresponding settings of the regular **Lid** type. The lips are designed to fit inside the box while retaining the hinge mechanism and its mounting geometry. With the toggle off, the hinged lid remains the original flat design.
+- **Adjustable sleeve rim height.** Added a dedicated height control for the rim/lip of the sliding sleeve (муфта), allowing its height to be adjusted independently of the other lid dimensions.
+- **Removal of individual divider segments.** The visual divider editor now has a **Remove arbitrary divider** mode. After enabling it, clicking a divider segment removes only the portion between its nearest wall or divider intersections. The rest of the divider remains intact. After a custom segment is removed, **Evenly** is disabled to prevent the editor from redistributing the modified layout; it becomes available again only after **Clear all**.
+- **Divider-removal state is retained with the project.** Custom gaps in the divider layout are part of the project configuration and are reflected in the generated box geometry.
+
+## 2026-11-15
+
+### Added
+- **Adjustable box corner radius.** A radius slider was added to the Walls group on the Box tab (0–20 mm in 0.5 mm increments; the maximum is limited by the box base dimensions). It rounds the outer vertical box corners and is accounted for when generating compatible lid geometry. The sleeve and cap also use matching rounded profiles: their inner corners follow the box shape while accounting for wall thickness and fit clearance. Older saved projects without a radius value retain square corners.
+- **Slip-on cap (Cap).** Added a separate `Cap` closure type alongside the friction-fit `Lid`, sliding `Sleeve`, and hinged lid. The cap fits over the box and has a cavity on its underside. Its internal dimensions account for the box dimensions, wall thickness, and fit tolerance. Its outer corner profile follows the box corner radius.
+
+### Changed
+- **README updated.** The feature overview and user guide now describe the four closure types, corner-radius settings, the current Box/Lid/Print workflow, project manager, automatic part arrangement, and STL integrity checks.
+
+## 2026-10-27
+
+### Changed
+- **Application interface redesigned.** Added a dark theme, top bar, and three sidebar tabs: Box, Lid, and Print. Volume, compartment, and divider calculators moved into the Start from… dialog on the Box tab. Project management, share links, and JSON import/export moved into the project menu and the `⋯` menu. Box and Lid settings are grouped into collapsible sections with short descriptions; longer explanations were replaced with tooltips. Closure selection is now a None / Lid / Sleeve / Hinged switch. Width, depth, and height sliders use different colours. Individual-part export moved to the Print tab, which also offers PLA / PETG / ABS material selection for weight estimates. Author and licence information is pinned to the bottom of the sidebar. Generator behaviour was not changed.
+- **Dedicated project manager page added.** Cards show an isometric sketch in real proportions, dimensions, compartment count, closure type, and save date. Projects can be opened, duplicated, and deleted. The current project is marked as open in the editor; unsaved work has its own card with naming and save controls. Added search by name or size, sorting by date or name, project creation, JSON import, and full-library export. The 3D scene remains loaded when navigating to the manager.
+- **Top-down visual divider editor added.** Dividers can be moved with the mouse or arrow keys, added along width and depth, evenly distributed, and removed. Visual / Numbers mode allows coordinates to be entered in millimetres. Each cell displays its usable dimensions. Dividers cannot be moved past their neighbours. The old divider-count fields and separate position sliders were replaced by the editor.
+- **Isometric view with dimension guides added.** A Perspective / Isometric switch is available in the 3D viewer and the selected mode is remembered. Isometric mode uses an orthographic camera with a fixed angle and automatic framing. Dragging pans the scene without rotating the camera. Dimension guides are shown for the box and nearby parts. Perspective mode retains free camera rotation and the previous zoom behaviour.
+- **Finger notches on outer walls can be disabled.** The Notch outer walls toggle allows notches to be cut only into dividers, leaving outer walls solid. A separate Notch divider walls toggle controls notches in dividers. If both are off, no notches are generated. Added mesh-integrity checks for the new parameter combinations.
+- **Divider height can be lower than the box rim.** When dividers are present, the Divider height slider sets their height from the floor. By default, dividers reach the top of the box and follow its height. A lower value leaves the outer walls extending above them. The geometry remains a single watertight mesh; notches and the lid lip account for divider height.
+- **Automatic part arrangement replaces Resize box to fill plate.** The Print tab now has an Auto-arrange parts toggle. The preview tests different layouts and 90° rotations to place the box and lid/sleeve on the printer plate. Warnings distinguish a part that cannot fit by itself from parts that fit individually but not together. Preview arrangement does not change exported STL files.
+- **Rounded bottom option added for finger notches.** Rounded bottom turns a rectangular notch into a U-shaped cutout with rounded lower corners. The radius depends on notch width. It applies to outer walls and dividers; each cutout is generated as one continuous shape to preserve mesh quality.
+- **Cutouts in the dividers toggle added.** The selected cutout pattern can also be applied to divider walls. Holes avoid outer walls, the floor, divider top edges, other dividers, and finger notches. Dividers that are too narrow or low remain solid.
+- **Cutouts in the floor toggle added.** This allows floor cutouts to be disabled while retaining the wall pattern.
+- **Licence changed from MPL 2.0 to Apache 2.0.** Added `LICENSE` and `NOTICE`; the licence and author are specified in `package.json`. Versions published before this date remain available under MPL 2.0.
+
+### Fixed
+- **Rear wall remained solid after disabling the hinged lid.** When switching from Hinged to None or Sleeve, the hinge flag could remain enabled in settings. The rear wall is now kept solid only when the hinged lid is actually enabled.
+- **Start from… calculators returned inaccurate compartment dimensions.** Divider coordinates are now calculated from the inner wall surface to the divider centreline and stored to two decimal places. The Items calculator accounts for actual divider thickness. Final dimensions are no longer rounded to whole millimetres; precision checks were added.
+
+## 2026-09-28
+
+### Changed
+- **Switching dimension modes now handles fit tolerance correctly.** Switching to Interior mode increases the box dimensions by the tolerance; switching back to Exterior subtracts the same clearance. Switching back and forth without changing other parameters leaves the final dimensions unchanged.
+
+### Fixed
+- **Outer dimensions were capped too low.** In Exterior mode, maximum width, depth, and height are no longer reduced by wall thickness and interior tolerance. The limit now matches the printer plate size.
+- **Accumulating floating-point error.** Derived dimensions in Interior mode are rounded to two decimal places, and dimensions in the 3D viewer are displayed to one decimal place.
+
+### Added
+- **Internal-dimension entry mode.** The Dimensions are switch allows users to enter target internal cavity dimensions instead of outer dimensions. Outer dimensions are calculated automatically using wall thickness. The Tolerance slider (0.3 mm by default) adds clearance. When tolerance or wall thickness changes, the requested cavity size is preserved and the outer size is recalculated. Saved projects continue to store `width`, `depth`, and `height` as outer dimensions; the mode and tolerance are stored separately.
+
+## 2026-07-20
+
+### Fixed
+- **Usable interior height now accounts for the lid lip.** When a friction-fit lid is enabled, its lip depth is subtracted from the Usable interior value, and Generate with Compartments accounts for that height when sizing the box. This prevents the lid from pressing against the contents. Hinged lids and sleeves are unaffected.
+
+## 2026-07-17
+
+### Fixed
+- **Finger notches no longer overlap intersecting dividers.** With dividers on both X and Z axes, walls are split into segments between intersections and each segment receives its own notch. Notches are offset 0.5 mm from dividers, corners, and joints. Slot Position % is calculated within each segment; notch width is limited by the narrowest segment.
+
+### Added
+- **Notches in dividers can be disabled.** The Notch divider walls too checkbox leaves dividers solid while cutting notches only into outer walls. Older projects retain the previous behaviour.
+- Added two `check:stl` configurations for X+Z divider layouts and outer-wall-only notches.
+
+## 2026-07-16
+
+### Added
+- **Divider coordinates in millimetres.** X/Z divider sliders show the coordinate in millimetres alongside the percentage. Each group displays usable compartment dimensions, accounting for divider thickness.
+- **Additional control-panel explanations.** Clarified that width, depth, and height on the Box tab are outer dimensions. Added explanations for wall thickness, chamfers, dividers, Generator calculators, lip height, and hinge diameter.
+
+## 2026-07-14
+
+### Added
+- **Finger notches.** The Box tab gained a Finger Slots section. Notches are cut down from the top to make it easier to remove cards, coins, tokens, and other flat objects. X Walls controls the left/right walls and X dividers; Z Walls controls the front/back walls and Z dividers; Both enables both directions. Width, depth, and position are configurable. Notches stay within the inner area, avoid corners and chamfers, and end above the floor. When hinges are enabled, the rear wall remains solid. Cutout patterns account for notch positions.
+- **Polygon mesh integrity validator.** Added `src/utils/meshValidator.ts` to check open and non-manifold edges, flipped and duplicate faces, zero-area triangles, and incorrectly oriented shells. Run it with `pnpm run check:stl`; it also runs from a git hook before changes are pushed and in CI before GitHub Pages deployment. The in-app STL exporter validates meshes and asks for confirmation before downloading a model with errors.
+- **Project sharing links.** Copy Share Link encodes a project in the URL fragment (`#p=…`). Opening the link loads the project in the browser. Project data is not sent to a server.
+- **Project-library backups.** Export All Projects saves the entire library to one JSON file. Import merges projects with the local library; projects with matching names are overwritten. Importing a single project is also supported.
+
+### Fixed
+- **Hinged lid exported with a non-manifold mesh.** The hinge mount was shifted by 0.3 mm so it reliably intersects the body and no longer creates coincident edges with the cylindrical hinge section.
+
+## 2026-07-13
+
+### Fixed
+- **STL export for boxes with cutout patterns.** The exporter now welds vertices at high precision and repairs T-junctions. Chamfer face orientation was corrected, duplicate breakpoints were removed, and tiny offsets in triangular cutouts were eliminated. Pattern, chamfer, divider, and hinge combinations pass automated watertightness checks.
+
+### Added
+- **Cutout patterns on box walls and floor.** The Box tab supports circles, squares, diamonds, hexagons, triangles, and slots. Wall holes avoid the top rim, floor, and chamfered corners. When hinges are enabled, the rear wall remains solid. Floor cutouts stay inside the cavity, with solid strips under dividers to bond them to the floor.
+- **Cutout patterns on sleeve side and rear walls.** Patterns previously affected only the sleeve's top and bottom plates; they now also cut the side and rear walls. Holes avoid the edges, front opening, finger notch, and text.
+
+## 2026-07-12
+
+### Changed
+- **README brought up to date.** Installation instructions now use pnpm. The guide describes tabs, lid types, chamfers, cutout patterns, printer-plate presets, project save/share, and material-use estimates.
+
+### Fixed
+- **GitHub Pages build and deployment.** The workflow now uses Node.js 24 instead of Node.js 20 because current pnpm requires Node.js 22.13 or later. The pnpm version is pinned in `package.json`, and the esbuild install script is allowlisted.
+
+## 2026-07-10
+
+### Fixed
+- **Open edges in exported STL files.** CSG-built parts (sleeves and text lids) now undergo mesh repair and triangulation during export. Hinge elements are built without boolean operations that produced difficult thin defects. Exported parts are checked for open edges.
+- **Floating export panel blocked 3D navigation.** Empty space around the cards and buttons no longer captures the mouse.
+- **Hinged lids closed on the wrong side.** They are now modelled as flat plates in their closed orientation, with text on the top face. Lip-height and fit-tolerance settings are hidden for hinged lids.
+- **Lids did not fit boxes with asymmetric dividers.** Lip notches are now mirrored to account for the lid being flipped during installation.
+
+### Changed
+- **Pinless snap hinges.** Tapered axle stubs on the lid snap into C-shaped clips on the box. Press down to assemble and pull up to remove; no separate pin is needed. The pin-hole diameter control was replaced with axle diameter (3 mm by default).
+- Sidebar tabs remain pinned to the top while scrolling.
+- **Floating export panel.** A button above the preview exports all parts and shows estimated total PLA usage. Expanded cards provide dimensions and individual STL export. The panel's expanded/collapsed state persists between sessions.
+- **Settings tab updated.** Printer plate settings, projects, and sharing are grouped there. Choose a printer preset or custom plate dimensions. Warnings appear if a part cannot fit even when rotated. The plate is drawn to scale in the 3D scene, and its dimensions persist between sessions.
+- Box width, depth, and height sliders now use 0.5 mm steps instead of 1 mm.
+- **Shared lid and sleeve settings.** Assembled preview, fit tolerance, and text/emoji settings are shared by both types. Text on the sleeve's top wall is also supported. Only type-specific settings remain separate.
+- Exported STL filenames receive a filesystem-safe project-name prefix.
+
+### Added
+- **Assembled preview.** The Lid tab toggle shows the closed lid, assembled hinges, or the box inserted into the sleeve. This affects the preview only, not STL exports.
+- **Parts panel below the 3D viewer.** Each printable part shows dimensions, estimated PLA weight based on mesh volume, and an STL export button.
+- Dimension labels and camera-control hints in the 3D viewer.
+- **Sliding sleeve mode.** Instead of a lid, create a sleeve with an open front into which the box slides. The closed rear wall acts as a stop. Sliding clearance and an optional finger grip are configurable.
+- **Named projects.** Save, load, and delete projects in the browser.
+- **JSON project sharing.** Export the current project as JSON and import it to restore the exact settings.
+- **Divider thickness.** Internal dividers can be thinner than outer walls. Thickness is limited to 0.4 mm through the outer-wall thickness; lid notches match divider thickness.
+- Help text for lid and sleeve tolerance sliders: a lower value means a tighter fit.
+- **Text rotation.** Rotate lid/sleeve text by 0°, 90°, 180°, or 270°. At 90°/270°, text runs along the depth of the part.
+- **Filament-saving cutout patterns.** Circles, squares, diamonds, hexagons, triangles, and slots can be cut through the lid or the sleeve's top and bottom walls. Size and spacing are configurable. Rows are staggered and triangles alternate point-up and point-down. Solid areas are preserved around text and finger grips, along edges, near the lip, and at the rear wall. The exporter includes boundary-loop capping to seal narrow gaps after complex CSG operations.
+
+### Changed
+- **Application layout.** The control panel is fixed on the right and scrolls independently; the 3D viewer uses the remaining window area. The parts panel overlays the preview, and author information moved to the sidebar. On smaller screens, the preview and controls stack vertically.
+- **Automatic work-state saving.** Current settings are saved whenever they change. Named projects and Reset to Defaults replace manual saving of the current state.
+
+## 2026-02-19
+
+### Added
+- **Cylindrical hinges.** Optional printable hinges along the rear edge (1–3) with configurable barrel and pin diameters. Pins are printed separately.
+- **Chamfers.** Chamfers on the outer vertical box edges; applied to both the box and lid.
+
+## 2026-02-13
+
+### Added
+- First release: a parametric box generator with interactive 3D preview and STL export.
+- Configure box dimensions, wall thickness, and internal dividers along the X/Z axes.
+- Friction-fit lid with adjustable lip height and tolerance, plus engraved or raised text.
+- Tools: volume calculator, compartment calculator, printer-plate arrangement optimizer, and divider editor.
+- Save the current project in the browser.
+- Deployment to GitHub Pages.

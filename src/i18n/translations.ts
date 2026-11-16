@@ -234,6 +234,9 @@ export interface Translations {
     spaceEvenly: string
     clearAll: string
     removeDivider: string
+    removeAnySegment: string
+    cancelSegmentRemoval: string
+    removeSegmentHint: string
     front: string
   }
   projectsView: {
@@ -357,6 +360,9 @@ export const translations: Record<Language, Translations> = {
       fitToleranceHintSleeve: 'Gap between the box and the sleeve interior. Lower is tighter; raise it if the box is hard to slide.',
       lipHeight: 'Lip height',
       lipHeightHint: 'How far the lid\'s inner lip reaches down into the box. A taller lip grips better but takes interior space.',
+      hingeSkirt: 'Hinged lid lips',
+      enableHingeLips: 'Enable lips',
+      hingeLipsHint: 'Adds an inner retaining skirt beneath the hinged lid. The hinge mechanism stays unchanged.',
       capSkirtHeight: 'Coupling wall height',
       capSkirtHeightHint: 'Height of the four side walls below the coupling cap roof.',
       fingerCutout: 'Finger cutout at the opening',
@@ -495,6 +501,9 @@ export const translations: Record<Language, Translations> = {
       spaceEvenly: 'Space evenly',
       clearAll: 'Clear all',
       removeDivider: 'Remove divider',
+      removeAnySegment: 'Remove any divider segment',
+      cancelSegmentRemoval: 'Cancel segment removal',
+      removeSegmentHint: 'Click the divider segment to remove it between the nearest wall or crossing divider.',
       front: 'front',
     },
     projectsView: {
@@ -616,6 +625,9 @@ export const translations: Record<Language, Translations> = {
       fitToleranceHintSleeve: 'Зазор между коробкой и внутренней частью чехла. Меньше — туже; увеличьте, если коробка трудно двигается.',
       lipHeight: 'Высота губки',
       lipHeightHint: 'Насколько внутренняя губка крышки заходит в коробку. Более высокая губка держится лучше, но занимает место.',
+      hingeSkirt: 'Губки крышки на петле',
+      enableHingeLips: 'Включить губки',
+      hingeLipsHint: 'Добавляет удерживающие губки под крышкой. Механизм петель остаётся без изменений.',
       capSkirtHeight: 'Высота бортика муфты',
       capSkirtHeightHint: 'Высота четырёх боковых стенок муфты под верхней площадкой.',
       fingerCutout: 'Вырез под палец',
@@ -754,6 +766,9 @@ export const translations: Record<Language, Translations> = {
       spaceEvenly: 'Равномерно',
       clearAll: 'Очистить всё',
       removeDivider: 'Удалить перегородку',
+      removeAnySegment: 'Удалить произвольную перегородку',
+      cancelSegmentRemoval: 'Отменить удаление перегородки',
+      removeSegmentHint: 'Щёлкните по участку перегородки — он удалится до ближайшей стенки или пересекающей перегородки.',
       front: 'перед',
     },
     projectsView: {
